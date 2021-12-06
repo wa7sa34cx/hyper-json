@@ -1,8 +1,25 @@
 [package]
-name = "hyper-json"
+name = "actix-json"
+description = "Retrieving mock JSON data"
 version = "0.1.0"
 edition = "2021"
+authors = ["Alex Black <wa7@sa34.cx>"]
+license = "MIT"
+repository = "https://github.com/wa7sa34cx/hyper-json"
+keywords = ["tokio", "hyper", "json"]
+readme = "README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "hyper_json"
 
 [dependencies]
+anyhow = "1.0"
+# reqwest = { version = "0.11", features = ["json"] }
+hyper = { version = "0.14", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+log = "0.4"
+pretty_env_logger = "0.4"
