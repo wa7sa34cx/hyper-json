@@ -4,47 +4,57 @@ mod logging;
 mod models;
 
 use dotenv::dotenv;
+use hyper::body::Buf;
 use hyper::{Body, Client, Method, Request, Uri};
 use hyper_tls::HttpsConnector;
 // use hyper::body::HttpBody as _;
 // use tokio::io::{stdout, AsyncWriteExt as _};
-// use models::Price;
+use models::Price;
+use std::cmp::Ordering;
 use tokio::task;
 
 pub async fn run() -> anyhow::Result<()> {
     // Enables logging
     enable_logging!();
 
-    
-
-    
-
-    
-
-    // Await the response...
-    // let mut res = client.request(req).await?;
-    // let res = client.request(req).await?;
-
-    // Print HTTP status
-    // log::info!("Response: {}", res.status());
-
-    // And now...
-    // while let Some(chunk) = res.body_mut().data().await {
-    //     stdout().write_all(&chunk?).await?;
-    // }
-
-    // while let Some(next) = res.data().await {
-    //     let chunk = next?;
-    //     io::stdout().write_all(&chunk).await?;
-    // }
-
     let mut handles = Vec::new();
 
     for i in 1..=10 {
         let handle = task::spawn(async move {
-            fetch().await.unwrap();
-            log::info!("{}", i);
+            let price = match fetch_json().await {
+                Ok(p) => p,
+                Err(e) => {
+                    log::warn!("Task {}: {}", i, e);
+                    return;
+                }
+            };
+
+            let Price { price, max_price } = price;
+
+            // Compare the price with the maximum purchase price
+            match price.cmp(&max_price) {
+                Ordering::Less => {
+                    log::warn!(
+                        "Task {}: price={} is lower than max_price={}",
+                        i,
+                        price,
+                        max_price
+                    );
+                }
+                Ordering::Greater => {
+                    log::info!("Task {}: price={} and max_price={}", i, price, max_price);
+                }
+                Ordering::Equal => {
+                    log::warn!(
+                        "Task {}: price={} is equal max_price={}",
+                        i,
+                        price,
+                        max_price
+                    );
+                }
+            }
         });
+
         handles.push(handle);
     }
 
@@ -55,7 +65,8 @@ pub async fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn fetch() -> anyhow::Result<()> {
+/// Fetches data
+async fn fetch_json() -> anyhow::Result<Price> {
     // Get URI from .env and parse it
     let uri: Uri = get_env("ENDPOINT").parse()?;
 
@@ -70,15 +81,19 @@ async fn fetch() -> anyhow::Result<()> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, Body>(https);
 
-    // Await the response...
-    // let mut res = client.request(req).await?;
+    // Await the response
     let res = client.request(req).await?;
 
-    log::info!("Response: {}", res.status());
+    // Aggregate the chunks of the body
+    let body = hyper::body::aggregate(res).await?;
 
-    Ok(())
+    // try to parse as json with serde_json
+    let price = serde_json::from_reader(body.reader())?;
+
+    Ok(price)
 }
 
+/// Gets env variables
 fn get_env(env: &'static str) -> String {
     dotenv().ok();
     std::env::var(env).unwrap_or_else(|_| panic!("Cannot get the {} env variable", env))
