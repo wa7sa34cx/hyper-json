@@ -11,15 +11,27 @@ use models::Price;
 use std::cmp::Ordering;
 use tokio::task;
 
+type HttpsClient = Client<hyper_tls::HttpsConnector<hyper::client::HttpConnector>>;
+
 pub async fn run() -> anyhow::Result<()> {
     // Enables logging
     enable_logging!();
 
+    // Get URI from .env and parse it
+    let uri: Uri = get_env("ENDPOINT").parse()?;
+
+    // Create client
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, Body>(https);
+
     let mut handles = Vec::new();
 
     for i in 1..=10 {
+        let u = uri.clone();
+        let c = client.clone();
+
         let handle = task::spawn(async move {
-            let price = match fetch_json().await {
+            let price = match fetch_json(u, c).await {
                 Ok(p) => p,
                 Err(e) => {
                     log::warn!("Task {}: {}", i, e);
@@ -64,20 +76,13 @@ pub async fn run() -> anyhow::Result<()> {
 }
 
 /// Fetches data
-async fn fetch_json() -> anyhow::Result<Price> {
-    // Get URI from .env and parse it
-    let uri: Uri = get_env("ENDPOINT").parse()?;
-
+async fn fetch_json(uri: Uri, client: HttpsClient) -> anyhow::Result<Price> {
     // Create request
     let req = Request::builder()
         .method(Method::GET)
         .uri(uri)
         .header("User-Agent", "hyper-json/1.0")
         .body(Body::empty())?;
-
-    // Create client
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, Body>(https);
 
     // Await the response
     let res = client.request(req).await?;
