@@ -33,8 +33,8 @@ pub async fn run() -> anyhow::Result<()> {
         let handle = task::spawn(async move {
             let price = match fetch_json(u, c).await {
                 Ok(p) => p,
-                Err(e) => {
-                    log::warn!("Task {}: {}", i, e);
+                Err(_) => {
+                    log::warn!("Task {}: Couldn't get JSON", i);
                     return;
                 }
             };
@@ -68,6 +68,7 @@ pub async fn run() -> anyhow::Result<()> {
         handles.push(handle);
     }
 
+    // Await for all tasks
     for handle in handles {
         handle.await?;
     }
