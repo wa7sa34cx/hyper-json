@@ -1,6 +1,9 @@
 # Hyper-JSON
 
-I just try to demonstrate my parallel and asynchronous programming skills using tokio and hyper libraries.
+I just try to demonstrate my parallel and asynchronous programming skills using [tokio] and [hyper] libraries.
+
+[tokio]: https://github.com/tokio-rs/tokio
+[hyper]: https://github.com/hyperium/hyper
 
 ## Deployment
 
