@@ -7,8 +7,6 @@ use dotenv::dotenv;
 use hyper::body::Buf;
 use hyper::{Body, Client, Method, Request, Uri};
 use hyper_tls::HttpsConnector;
-// use hyper::body::HttpBody as _;
-// use tokio::io::{stdout, AsyncWriteExt as _};
 use models::Price;
 use std::cmp::Ordering;
 use tokio::task;
